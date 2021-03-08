@@ -21,20 +21,21 @@ export const fetchExpense = (token, categoryId) =>{
     const config = {
         headers: { Authorization: `Bearer ${token}` }
     }
-    console.log("CATEGORYID : " + categoryId)
     return new Promise(function(resolve, reject){
         axios.get('http://127.0.0.1:4000/expense', {params: {categoryId}, ...config})
         .then(result => {
             const data = []
-            console.log(result.data.data)
             result.data.data.map(expense => (data.push(expense)))
             resolve(data)
         })
         .catch(err => {
-            console.log("WWWWWKSJDFKDFKMEKEGFKEG")
             const errorData = err.response
-            console.log(err)
             reject(errorData);
         })
     }
 )}
+
+export function sleep(milliSeconds){
+    var startTime = new Date().getTime();                    // get the current time
+    while (new Date().getTime() < startTime + milliSeconds); // hog cpu until time's up
+}

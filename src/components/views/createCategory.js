@@ -1,6 +1,5 @@
 import { Grid, TextField } from '@material-ui/core'
 import React, { useState } from 'react'
-import axios from "axios";
 import { makeStyles } from '@material-ui/core/styles';
 import Card from '@material-ui/core/Card';
 import CardActions from '@material-ui/core/CardActions';
@@ -11,6 +10,8 @@ import Button from '@material-ui/core/Button';
 import * as yup from 'yup';
 import Typography from '@material-ui/core/Typography';
 import { Field, Formik } from 'formik';
+import { closeCategorySnackbar, createCategoryAction } from '../../redux/actions/createCategoryAction'
+import { connect, useDispatch } from 'react-redux';
 
 const useStyles = makeStyles({
     root: {
@@ -26,11 +27,12 @@ const validationSchema = yup.object({
         .max(20),
 })
 
-export function CreateCategory(){
+function CreateCategory(props){
     const [data, setData] = useState('');
     const [error,setError] = useState('');
     const [errorOpen, seterrorOpen] = useState(false);
     const [successOpen,setsuccessOpen] = useState(false);
+    const dispatch = useDispatch();
     const classes = useStyles();
     const token = localStorage.getItem('etrackertoken'); 
     const config = {
@@ -39,6 +41,7 @@ export function CreateCategory(){
     
 
     const handleClose = () => {
+        dispatch(closeCategorySnackbar())
         seterrorOpen(false)
         setsuccessOpen(false)
     };
@@ -58,32 +61,21 @@ export function CreateCategory(){
                 <Formik
                     initialValues={{ name: ''}}
                     onSubmit={async (values, { setSubmitting, resetForm }) => {
-                        axios.post('http://127.0.0.1:4000/expense/category/', values, config)
-                        .then(result => {
-                            setData(result.data);
-                            setError('')
-                            setsuccessOpen(true);
-                            resetForm();
-                        })
-                        .catch(err => {
-                            console.log("___________REQUEST_ERROR___________")
-                            console.log(err.response.data)
-                            setError(err.response.data);
-                            seterrorOpen(true);
-                        })
+                        dispatch(createCategoryAction(values))
+                        resetForm()
                     }}
                     validationSchema={validationSchema}
                     >
                     {({values,errors,touched,handleChange,handleBlur,handleSubmit,isSubmitting}) => (
                         <form onSubmit={handleSubmit}>
-                            <Snackbar open={errorOpen} autoHideDuration={6000} onClose={handleClose} >
+                            <Snackbar open={props.createCategory.snackbarError} autoHideDuration={6000} onClose={handleClose} >
                                 <Alert onClose={handleClose} severity="error" >
-                                Error: {error ? JSON.stringify(error.message).replace(/[\\'"]+/g, '') : 'Error Not set'}
+                                Error: {props.createCategory.error ? JSON.stringify(props.createCategory.error).replace(/[\\'"]+/g, '') : 'Error Not set'}
                                 </Alert>
                             </Snackbar>
-                            <Snackbar open={successOpen} autoHideDuration={6000} onClose={handleClose} >
+                            <Snackbar open={props.createCategory.snackbarMessage} autoHideDuration={6000} onClose={handleClose} >
                                 <Alert onClose={handleClose} severity="success" >
-                                Success: {data ? JSON.stringify(data.message).replace(/[\\'"]+/g, '') : 'message Not set'}
+                                Success: {props.createCategory.message ? JSON.stringify(props.createCategory.message).replace(/[\\'"]+/g, '') : 'message Not set'}
                                 </Alert>
                             </Snackbar>
                             <CardContent>
@@ -110,3 +102,9 @@ export function CreateCategory(){
         </Grid>
     )
 }
+
+const mapStateToProps = state => ({
+    createCategory: state.createCategory
+  })
+  
+  export default connect(mapStateToProps, { createCategoryAction })(CreateCategory)

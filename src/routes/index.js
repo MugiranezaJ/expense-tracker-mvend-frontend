@@ -1,55 +1,42 @@
-import React from 'react';
-import Landing from '../components/landingPage';
-import { Switch, Redirect } from 'react-router-dom';
-import RouteWithLayout  from '../components/RouteWithLayout';
-import DefaultLayout from '../components/layout';
-import { CreateCategory } from '../components/createCategory';
-import ListCategory from '../components/listCategory';
-import { CreateExpense } from '../components/createExpense';
-import ListExpense from '../components/listExpense';
+import React, { useEffect, useState } from 'react'
+import {BrowserRouter as Router, Redirect, Switch, Route} from 'react-router-dom'
+import { createBrowserHistory } from 'history';
+import Landing from '../components/views/landingPage';
+import CreateCategory from '../components/views/createCategory';
+import ListCategory from '../components/views/listCategory';
+import CreateExpense from '../components/views/createExpense';
+import ListExpense from '../components/views/listExpense';
+import Login from '../components/views/login'
+import NavBar from '../components/layout/navbar'
+import Footer from '../components/layout/footer'
+import { checkToken, protectRouted } from '../services/protectRoute';
+import ProtectedRoute from '../protectedRoutes';
 
-const Routes = () => {
-    return (
-      <Switch>
-        <Redirect
-          exact
-          from="/"
-          to="/welcome"
-        />
-        <RouteWithLayout
-          component={Landing}
-          exact
-          layout={DefaultLayout}
-          path="/welcome"
-        />
-        <RouteWithLayout
-          component={CreateCategory}
-          exact
-          layout={DefaultLayout}
-          path="/category/create"
-        />
-        <RouteWithLayout
-          component={ListCategory}
-          exact
-          layout={DefaultLayout}
-          path="/category/view"
-        />
-        <RouteWithLayout
-          component={CreateExpense}
-          exact
-          layout={DefaultLayout}
-          path="/expense/create"
-        />
-        <RouteWithLayout
-          component={ListExpense}
-          exact
-          layout={DefaultLayout}
-          path="/expense/view"
-        />
-        
-        <Redirect to="/PageNotFound" />
-      </Switch>
-    );
-  };
-  
-  export default Routes;
+const history = createBrowserHistory()
+export default function InternalRoutes(){
+    const[isProtected, setIsProtected] = useState(false);
+    useEffect(() => {
+        setIsProtected(checkToken())
+        // protectRouted().then(result => {
+        //     setIsProtected(result)
+        // }).catch(err => {
+        //     setIsProtected(err)
+        // })
+    }, []);
+
+    return(
+        <Router history={history}>  
+            <NavBar />
+            <Switch>
+               <ProtectedRoute exact path='/' isLoggedin={checkToken()}  seen={true} component={Landing} />
+               <ProtectedRoute path='/category/create' isLoggedin={checkToken()} seen={true} component={CreateCategory}/>
+               <ProtectedRoute path='/category/view' isLoggedin={checkToken()} seen={true} component={ListCategory}/>
+               <ProtectedRoute path="/expense/create" isLoggedin={checkToken()} seen={true} component={CreateExpense} />
+               <ProtectedRoute path="/expense/view" isLoggedin={checkToken()} seen={true} component={ListExpense} />
+               <Route path="/login" component={Login} />
+               <Redirect to="/PageNotFound" />
+            </Switch>
+            <Footer />
+        </Router>
+    )
+}

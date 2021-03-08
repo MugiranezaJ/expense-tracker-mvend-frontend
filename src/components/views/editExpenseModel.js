@@ -11,18 +11,17 @@ import Button from '@material-ui/core/Button';
 import * as yup from 'yup';
 import Typography from '@material-ui/core/Typography';
 import { Field, Formik } from 'formik';
-import InputLabel from '@material-ui/core/InputLabel';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
-import { findSuggestions } from '../services/categorySuggestions';
+import { useDispatch } from 'react-redux';
+import { createExpenseAction } from '../../redux/actions/createExpenseAction';
+import { closeSnackbar, updateExpenseAction } from '../../redux/actions/updateExpenseAction';
+import { getExpenses } from '../../redux/actions/fetchExpenseAction';
 
 const token = localStorage.getItem('etrackertoken'); 
 const useStyles = makeStyles({
     root: {
-        margin:'20px 0',
+        margin:'20px 20px',
         // maxWidth: 345,
-        width:'50%'
+        // width:'50%'
     },
   });
 const validationSchema = yup.object({
@@ -33,7 +32,7 @@ const validationSchema = yup.object({
 })
 
 
-export function CreateExpense(){
+export function UpdateExpense({ initialValues, categoryData, createExpense, updateExpense }){
     const [data, setData] = useState('');
     const [error,setError] = useState('');
     const [errorOpen, seterrorOpen] = useState(false);
@@ -41,6 +40,7 @@ export function CreateExpense(){
     const [open, setOpen] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [executed, setExecuted] = useState(false);
+    const dispatch = useDispatch()
     const classes = useStyles();
     
     const config = {
@@ -51,30 +51,11 @@ export function CreateExpense(){
       }, []);
 
     const handleSuggestions = async (value) => {
-        // const dataSet = await findSuggestions(token)
-        // console.log("QQ: " + dataSet)
-        // setSuggestions(dataSet)
         axios.get('http://127.0.0.1:4000/expense/category/', config)
         .then(result => {
-            console.log("___________REQUEST___________")
-            console.log(result.data)
-            // let data = result.data;
             setSuggestions(result.data)
         })
-        // axios.get(`${process.env.REACT_APP_BACKEND_LINK}/search/locations/all`)
-        // .then(res => {
-        //     setSuggestions(res.data.locations.rows)
-        // })
     }
-    // window.onload = async function(){
-    //     if(!executed){
-    //         const dataSet = await findSuggestions(token)
-    //         console.log("ooooooooooooooooo")
-    //         console.log(dataSet)
-    //         setExecuted(true)
-    //         setSuggestions(...dataSet)
-    //     }
-    //   }
 
     window.onload = function(){
         setExecuted(true)
@@ -82,21 +63,13 @@ export function CreateExpense(){
     }
     
     const handleClose = () => {
-        seterrorOpen(false)
-        setsuccessOpen(false)
-    };
-    const handleCloseSelect = () => {
-        setOpen(false);
+        dispatch(closeSnackbar())
     };
 
-    const handleOpenSelect = () => {
-        setOpen(true);
-    };
     function Alert(props) {
         return <MuiAlert elevation={6} variant="filled" {...props}  itemID='alert' />;
     }
-    console.log(suggestions)
-    console.log("-------------------------------s")
+
     return(
         <Grid
         container
@@ -105,37 +78,38 @@ export function CreateExpense(){
         alignItems="center"
         style={{flexDirection:"column", paddingTop:"20px"}}
         >
-            <Typography><b>Create Espense</b></Typography>
+            <Typography><b>{!initialValues ? 'Create Expense' : 'Update Expense'}</b></Typography>
             <Card className={classes.root}>
                 <Formik
-                    initialValues={{ name: '', amount:'', number:'', categoryId:''}}
+                    initialValues={ initialValues ? initialValues : {name:'', amount:'', number:'', categoryId:categoryData.id} }
                     onSubmit={async (values, { setSubmitting, resetForm }) => {
-                        axios.post('http://127.0.0.1:4000/expense/', values, config)
-                        .then(result => {
-                            setData(result.data);
-                            setError('')
-                            setsuccessOpen(true);
-                            resetForm();
-                        })
-                        .catch(err => {
-                            console.log("___________REQUEST_ERROR___________")
-                            console.log(err.response.data)
-                            setError(err.response.data);
-                            seterrorOpen(true);
-                        })
+                        if(initialValues){
+                            const {id, categoryId, updatedAt, createdAt, ...dataSet} = {...values}
+                            const toBeUpdated = {...dataSet}
+                            dispatch(updateExpenseAction( initialValues.id,toBeUpdated))
+                            setTimeout(function(){
+                                dispatch(getExpenses(categoryData.id))
+                            }, 2000)
+                        }else{
+                            dispatch(createExpenseAction(values))
+                            setTimeout(function(){
+                                dispatch(getExpenses(values.categoryId))
+                              }, 1000)
+                            resetForm()
+                        }
                     }}
                     validationSchema={validationSchema}
                     >
                     {({values,errors,touched,handleChange,handleBlur,handleSubmit,isSubmitting}) => (
                         <form onSubmit={handleSubmit}>
-                            <Snackbar open={errorOpen} autoHideDuration={6000} onClose={handleClose} >
+                            <Snackbar open={updateExpense.snackbarError || createExpense.snackbarError} autoHideDuration={6000} onClose={handleClose} >
                                 <Alert onClose={handleClose} severity="error" >
-                                Error: {error ? JSON.stringify(error.error).replace(/[\\'"]+/g, '') : 'Error Not set'}
+                                Error: {updateExpense.error || createExpense.error ? JSON.stringify(updateExpense.error || createExpense.error).replace(/[\\'"]+/g, '') : 'Error Not set'}
                                 </Alert>
                             </Snackbar>
-                            <Snackbar open={successOpen} autoHideDuration={6000} onClose={handleClose} >
+                            <Snackbar open={updateExpense.snackbarMessage || createExpense.snackbarMessage} autoHideDuration={6000} onClose={handleClose} >
                                 <Alert onClose={handleClose} severity="success" >
-                                Success: {data ? JSON.stringify(data.message).replace(/[\\'"]+/g, '') : 'message Not set'}
+                                Success: {updateExpense.message || createExpense.message ? JSON.stringify(updateExpense.message || createExpense.message).replace(/[\\'"]+/g, '') : 'message Not set'}
                                 </Alert>
                             </Snackbar>
                             <CardContent>
@@ -166,32 +140,10 @@ export function CreateExpense(){
                                     error={touched.number && errors.number}
                                     helperText={touched.number && errors.number}
                                 />
-                                <FormControl className={classes.formControl} fullWidth={true}>
-                                    <InputLabel id="demo-controlled-open-select-label">Category</InputLabel>
-                                    <Select
-                                    name='categoryId'
-                                    labelId="demo-controlled-open-select-label"
-                                    id="demo-controlled-open-select"
-                                    open={open}
-                                    onClose={handleCloseSelect}
-                                    onOpen={handleOpenSelect}
-                                    // value={age}
-                                    onChange={handleChange}
-                                    >
-                                    <MenuItem disabled={true} value="">
-                                        <em>None</em>
-                                    </MenuItem>
-                                    {
-                                        suggestions.map(item => (
-                                            <MenuItem value={item.category.id}>{item.category.name}</MenuItem>
-                                        ))
-                                    }
-                                    </Select>
-                                </FormControl>
                             </CardContent>
                             <CardActions>
                                 <Button type="submit" disabled={isSubmitting} size="small" color="primary">
-                                Create
+                                {!initialValues ? 'Create' : 'Update'}
                                 </Button>
                                 {successOpen}
                             </CardActions>

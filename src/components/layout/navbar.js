@@ -5,6 +5,10 @@ import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import Drawer from './drawer';
+import { logOut } from '../../services/protectRoute';
+import { loginAction } from '../../redux/actions/loginAction';
+import { connect } from 'react-redux';
+import { setProtection } from '../../redux/actions/setProtectionAction';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -18,20 +22,24 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ButtonAppBar() {
+function ButtonAppBar(props) {
   const classes = useStyles();
-
+  const isProtected = props.security.isProtected
   return (
     <div className={classes.root}>
       <AppBar position="static">
         <Toolbar>
-          <Drawer/>
+          {isProtected? <Drawer/> : null}
           <Typography variant="h6" className={classes.title}>
             ETracker
           </Typography>
-          <Button color="inherit">Logout</Button>
         </Toolbar>
       </AppBar>
     </div>
   );
 }
+const mapStateToProps = state =>({
+  security: state.protection
+});
+export {ButtonAppBar};
+export default connect(mapStateToProps, { setProtection})(ButtonAppBar);
